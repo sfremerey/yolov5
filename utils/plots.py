@@ -80,6 +80,23 @@ def plot_one_box(x, im, color=(128, 128, 128), label=None, line_thickness=3):
         cv2.rectangle(im, c1, c2, color, -1, cv2.LINE_AA)  # filled
         cv2.putText(im, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
+def blur_one_box(x, im, color=(128, 128, 128), label=None, line_thickness=3):
+    # Plots one bounding box on image 'im' using OpenCV
+    assert im.data.contiguous, 'Image not contiguous. Apply np.ascontiguousarray(im) to plot_on_box() input image.'
+    tl = line_thickness or round(0.002 * (im.shape[0] + im.shape[1]) / 2) + 1  # line/font thickness
+    if label.split(" ")[0] == "person":
+        c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
+        # cv2.rectangle(im, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
+        # For the following lines, cf. https://stackoverflow.com/questions/58163739/blur-content-from-a-rectangle-with-opencv
+        x, y = c1[0], c1[1]
+        w, h = c2[0] - c1[0], c2[1] - c1[1]
+
+        # Grab ROI with Numpy slicing and blur
+        ROI = im[y:y+h, x:x+w]
+        blur = cv2.GaussianBlur(ROI, (51,51), 0)
+
+        # Insert ROI back into image
+        im[y:y+h, x:x+w] = blur
 
 def plot_one_box_PIL(box, im, color=(128, 128, 128), label=None, line_thickness=None):
     # Plots one bounding box on image 'im' using PIL
@@ -299,7 +316,7 @@ def plot_labels(labels, names=(), save_dir=Path(''), loggers=None):
     matplotlib.use('svg')  # faster
     ax = plt.subplots(2, 2, figsize=(8, 8), tight_layout=True)[1].ravel()
     y = ax[0].hist(c, bins=np.linspace(0, nc, nc + 1) - 0.5, rwidth=0.8)
-    # [y[2].patches[i].set_color([x / 255 for x in colors(i)]) for i in range(nc)]  # update colors bug #3195 
+    # [y[2].patches[i].set_color([x / 255 for x in colors(i)]) for i in range(nc)]  # update colors bug #3195
     ax[0].set_ylabel('instances')
     if 0 < len(names) < 30:
         ax[0].set_xticks(range(len(names)))
